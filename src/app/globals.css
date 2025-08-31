@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* You can add project-wide custom styles here */
+
+/* Reusable component styles */
+.card {
+  @apply bg-white rounded-lg shadow p-4;
+}
+
+.container {
+  @apply max-w-6xl mx-auto px-6;
+}
