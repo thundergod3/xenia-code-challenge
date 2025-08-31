@@ -1,4 +1,4 @@
-# Xenia Credit Rule Engine — Challenge
+# Credit Rule Engine — Challenge
 
 ## Summary
 

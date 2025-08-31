@@ -349,8 +349,13 @@ export default function TestCasesPage() {
                 Run
               </Button>
               <Button
+                onClick={() => router.push(ROUTES.TEST_CASE_EDIT(row.id))}
+                className="bg-gray-600 text-white">
+                Edit
+              </Button>
+              <Button
                 onClick={() => handleDelete(row.id)}
-                className="px-2 py-1 bg-red-600 text-white rounded">
+                className="bg-red-600 text-white">
                 Delete
               </Button>
             </div>

@@ -29,5 +29,17 @@ export default function useTestCases() {
     await load();
   };
 
-  return { tests, loading, refresh: load, run, remove };
+  const get = async (id: string) => {
+    const { getTestCase } = await import("@/src/services/testCasesService");
+    return getTestCase(id);
+  };
+
+  const update = async (id: string, payload: any) => {
+    const { updateTestCase } = await import("@/src/services/testCasesService");
+    const res = await updateTestCase(id, payload);
+    await load();
+    return res;
+  };
+
+  return { tests, loading, refresh: load, run, remove, get, update };
 }

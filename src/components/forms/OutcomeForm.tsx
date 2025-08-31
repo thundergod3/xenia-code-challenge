@@ -13,13 +13,32 @@ import Textarea from "../ui/atoms/Textarea";
 
 export default function OutcomeForm({
   onSubmit,
+  initialValues,
 }: {
   onSubmit: (v: any) => void;
+  initialValues?: any;
 }) {
   const [submitting, setSubmitting] = useState(false);
-  const { register, handleSubmit, formState } = useForm({
+  const { register, handleSubmit, formState, reset } = useForm({
     resolver: zodResolver(OutcomeSchema as any),
+    defaultValues: {
+      type: initialValues?.type || "",
+      params: initialValues
+        ? JSON.stringify(initialValues.params || {}, null, 2)
+        : "",
+    },
   });
+
+  React.useEffect(() => {
+    if (initialValues) {
+      reset({
+        type: initialValues.type || "",
+        params: initialValues
+          ? JSON.stringify(initialValues.params || {}, null, 2)
+          : "",
+      });
+    }
+  }, [initialValues, reset]);
   const router = useRouter();
 
   const { errors } = formState;

@@ -18,29 +18,45 @@ export default function TestCaseForm({
   initialValues?: any;
   onSave: (vals: any) => Promise<void>;
 }) {
+  const initial = React.useMemo(() => {
+    if (!initialValues) return {} as any;
+    // normalize shapes: support responses that wrap under `test_case` or `data.test_case`,
+    // or the flat export shape that already contains fields.
+    let tc =
+      (initialValues.test_case as any) ||
+      (initialValues.data?.test_case as any) ||
+      initialValues;
+    // fallback: if rule object exists at top-level, prefer its id
+    const ruleId =
+      tc.rule_id ||
+      initialValues.rules?.id ||
+      initialValues.rule_detail?.id ||
+      initialValues.rule?.id ||
+      null;
+    if (ruleId && !tc.rule_id) tc = { ...tc, rule_id: ruleId };
+    return tc;
+  }, [initialValues]);
   const { rules, refresh: refreshRules } = useRules();
   const { facts, refresh: refreshFacts } = useFacts();
 
   const [selectedRule, setSelectedRule] = useState<string | undefined>(
-    initialValues.rule_id || initialValues.rule || undefined
+    initial.rule_id || initial.rule || undefined
   );
-  const [name, setName] = useState<string>(initialValues.name || "");
+  const [name, setName] = useState<string>(initial.name || "");
   const [inputFacts, setInputFacts] = useState<Record<string, any>>(
-    initialValues.input_facts || {}
+    initial.input_facts || {}
   );
   const [newFactToAdd, setNewFactToAdd] = useState<string>("");
   const [inputText, setInputText] = useState<string>(
-    initialValues.input_facts
-      ? JSON.stringify(initialValues.input_facts, null, 2)
-      : ""
+    initial.input_facts ? JSON.stringify(initial.input_facts, null, 2) : ""
   );
   const [saving, setSaving] = useState(false);
   const { outcomes, refresh: refreshOutcomes } = useOutcomes();
   const [selectedOutcomeId, setSelectedOutcomeId] = useState<string | null>(
-    initialValues.expected_output?.type ? null : null
+    null
   );
   const [outcomeParams, setOutcomeParams] = useState<Record<string, any>>(
-    initialValues.expected_output?.params || {}
+    initial.expected_output?.params || {}
   );
   const [nameError, setNameError] = useState<string | null>(null);
   const [ruleError, setRuleError] = useState<string | null>(null);
@@ -310,8 +326,8 @@ export default function TestCaseForm({
       Object.keys(inputFacts).length > 0
         ? inputFacts
         : parseInputText(inputText || "{}");
-    const expectedText = initialValues.expected_output
-      ? JSON.stringify(initialValues.expected_output, null, 2)
+    const expectedText = initial.expected_output
+      ? JSON.stringify(initial.expected_output, null, 2)
       : "";
     const expected = selectedOutcomeId
       ? (() => {
@@ -445,6 +461,23 @@ export default function TestCaseForm({
     refreshFacts();
     refreshOutcomes();
   }, []);
+
+  // if an initial rule object was passed via API (e.g. `rules` or `rule_detail`),
+  // set the selectedRule and outcome params accordingly when outcomes finish loading
+  useEffect(() => {
+    if (!initial) return;
+    if (initial.rule_id) setSelectedRule(initial.rule_id);
+    // if expected_output includes a type that matches an existing outcome, set params
+    if (initial.expected_output) {
+      setOutcomeParams(initial.expected_output.params || {});
+    }
+    setName(initial.name || "");
+    setInputFacts(initial.input_facts || {});
+    setInputText(
+      initial.input_facts ? JSON.stringify(initial.input_facts, null, 2) : ""
+    );
+    setSelectedOutcomeId(initial?.rule_detail?.event_id);
+  }, [initial]);
 
   return (
     <div>

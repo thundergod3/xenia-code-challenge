@@ -94,6 +94,7 @@ export default function FactForm({
         <Select
           {...register("type")}
           options={["number", "string", "boolean", "list"]}
+          placeholder="Select type"
         />
         {errors.type && (
           <div className="text-sm text-red-600 mt-1">

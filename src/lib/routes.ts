@@ -9,10 +9,12 @@ export const ROUTES = {
 
   OUTCOMES: "/outcomes",
   OUTCOME_NEW: "/outcomes/new",
+  OUTCOME_EDIT: (id: string) => `/outcomes/${id}/edit`,
 
   TEST_CASES: "/test-cases",
   TEST_CASE_NEW: "/test-cases/new",
   TEST_CASE_ERRORS: "/test-cases/errors",
+  TEST_CASE_EDIT: (id: string) => `/test-cases/${id}/edit`,
 
   BUILDER: "/builder",
 };

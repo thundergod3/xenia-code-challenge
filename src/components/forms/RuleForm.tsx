@@ -71,10 +71,7 @@ export default function RuleForm({
   const router = useRouter();
 
   const { errors } = formState;
-  const selectedFact = watch("fact");
-  const selectedOperator = watch("operator");
   const selectedEventId = watch("event_id");
-  const factType = facts.find((f) => f.name === selectedFact)?.type || "string";
 
   const submit = async (values: any) => {
     setSubmitting(true);
@@ -148,6 +145,7 @@ export default function RuleForm({
             {...register("event_id")}
             value={selectedEventId}
             options={outcomeOptions}
+            placeholder="Select outcome"
           />
         </div>
         {errors.event_id && (

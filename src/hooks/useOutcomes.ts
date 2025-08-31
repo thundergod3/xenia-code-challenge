@@ -25,5 +25,25 @@ export default function useOutcomes() {
     return res;
   };
 
-  return { outcomes, loading, refresh: load, create };
+  const get = async (id: string) => {
+    const { getOutcome } = await import("@/src/services/outcomesService");
+    return getOutcome(id);
+  };
+
+  const update = async (id: string, payload: any) => {
+    const { updateOutcome } = await import("@/src/services/outcomesService");
+    const res = await updateOutcome(id, payload);
+    await load();
+    return res;
+  };
+
+  const remove = async (id: string) => {
+    // lazy import to avoid circular deps in some setups
+    const { deleteOutcome } = await import("@/src/services/outcomesService");
+    const res = await deleteOutcome(id);
+    await load();
+    return res;
+  };
+
+  return { outcomes, loading, refresh: load, create, remove, get, update };
 }

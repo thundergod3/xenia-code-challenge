@@ -45,7 +45,7 @@ export const RuleSchema = z.object({
   name: z.string().min(1),
   description: z.string(),
   json_conditions: z.any(),
-  event_id: z.string().optional().nullable(),
+  event_id: z.string(),
 });
 
 export const RuleImportSchema = z.object({
