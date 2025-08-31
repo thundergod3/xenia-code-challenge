@@ -1,9 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   listTestCases as fetchTestCases,
   runTestCase as runTestService,
   deleteTestCase as deleteTestService,
+  getTestCase as getTestCaseService,
+  updateTestCase as updateTestCaseService,
+  createTestCase as createTestCaseService,
 } from "@/src/services/testCasesService";
 
 export default function useTestCases() {
@@ -30,16 +33,18 @@ export default function useTestCases() {
   };
 
   const get = async (id: string) => {
-    const { getTestCase } = await import("@/src/services/testCasesService");
-    return getTestCase(id);
+    return getTestCaseService(id);
   };
 
-  const update = async (id: string, payload: any) => {
-    const { updateTestCase } = await import("@/src/services/testCasesService");
-    const res = await updateTestCase(id, payload);
-    await load();
+  const create = async (payload: any) => {
+    const res = await createTestCaseService(payload);
     return res;
   };
 
-  return { tests, loading, refresh: load, run, remove, get, update };
+  const update = async (id: string, payload: any) => {
+    const res = await updateTestCaseService(id, payload);
+    return res;
+  };
+
+  return { tests, loading, refresh: load, run, remove, get, create, update };
 }

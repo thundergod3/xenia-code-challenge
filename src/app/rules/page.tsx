@@ -9,6 +9,7 @@ import { downloadRulesExport } from "@/src/services/rulesExportService";
 import ImportButtonModal from "@/src/components/ui/molecules/ImportButtonModal";
 import { RuleImportSchema } from "@/src/lib/validations";
 import { ROUTES } from "@/src/lib/routes";
+import { toast } from "react-toastify";
 
 export default function RulesPage() {
   const { rules, loading, refresh, remove } = useRules();
@@ -23,6 +24,7 @@ export default function RulesPage() {
   const handleConfirm = async () => {
     if (!pendingId) return;
     await remove(pendingId);
+    toast.success("Rule deleted");
     setConfirmOpen(false);
     setPendingId(null);
   };

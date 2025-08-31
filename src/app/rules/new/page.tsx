@@ -1,8 +1,11 @@
 "use client";
 import React from "react";
 import RuleForm from "@/src/components/forms/RuleForm";
+import useRules from "@/src/hooks/useRules";
 
 export default function NewRulePage() {
+  const { create } = useRules();
+
   const handleSubmit = async (values: any) => {
     const json_conditions = values.json_conditions || {
       conditions: { all: [values] },
@@ -10,13 +13,10 @@ export default function NewRulePage() {
     const payload = {
       name: values.name,
       description: values.description || "",
+      event_id: values.event_id,
       json_conditions,
     };
-    await fetch("/api/rules", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    await create(payload);
   };
 
   return (

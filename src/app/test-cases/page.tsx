@@ -13,14 +13,13 @@ import OutputSummary from "@/src/components/ui/molecules/OutputSummary";
 import JsonModal from "@/src/components/ui/molecules/JsonModal";
 import ConfirmModal from "@/src/components/ui/molecules/ConfirmModal";
 import { getFriendlyText } from "@/src/lib/helpers";
-import { deleteTestCase } from "@/src/services/testCasesService";
 import { downloadTestCasesExport } from "@/src/services/testCasesExportService";
 import ImportButtonModal from "@/src/components/ui/molecules/ImportButtonModal";
 import { TestCaseImportSchema } from "@/src/lib/validations";
 import { ROUTES } from "@/src/lib/routes";
 
 export default function TestCasesPage() {
-  const { tests, loading, refresh, run } = useTestCases();
+  const { tests, loading, refresh, run, remove } = useTestCases();
   const { rules, refresh: loadRules } = useRules();
   const { facts, refresh: loadFacts } = useFacts();
   const [runningId, setRunningId] = useState<string | null>(null);
@@ -266,9 +265,8 @@ export default function TestCasesPage() {
   const confirmDelete = async () => {
     if (!pendingDeleteId) return;
     try {
-      await deleteTestCase(pendingDeleteId);
-      await refresh();
-      toast.success("Deleted test case");
+      await remove(pendingDeleteId);
+      toast.success("Test case deleted");
     } catch (e: any) {
       toast.error("Failed to delete test case");
     } finally {

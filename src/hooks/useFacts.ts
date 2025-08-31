@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   listFacts as fetchFacts,
   deleteFact as deleteFactService,
@@ -29,8 +29,6 @@ export default function useFacts() {
 
   const create = async (payload: any) => {
     const res = await createFactService(payload);
-    // Refresh list or append
-    await load();
     return res;
   };
 
@@ -41,7 +39,6 @@ export default function useFacts() {
 
   const update = async (id: string, payload: any) => {
     const res = await updateFactService(id, payload);
-    await load();
     return res;
   };
 

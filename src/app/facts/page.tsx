@@ -9,6 +9,7 @@ import ConfirmModal from "@/src/components/ui/molecules/ConfirmModal";
 import { downloadFactsExport } from "@/src/services/factsExportService";
 import ImportButtonModal from "@/src/components/ui/molecules/ImportButtonModal";
 import { ROUTES } from "@/src/lib/routes";
+import { toast } from "react-toastify";
 
 export default function FactsPage() {
   const { facts, loading, remove, refresh } = useFacts();
@@ -23,6 +24,7 @@ export default function FactsPage() {
   const handleConfirm = async () => {
     if (!pendingId) return;
     await remove(pendingId);
+    toast.success("Fact deleted");
     setConfirmOpen(false);
     setPendingId(null);
   };

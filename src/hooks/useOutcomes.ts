@@ -1,8 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   listOutcomes as fetchOutcomes,
   createOutcome as createOutcomeService,
+  getOutcome as getOutcomeService,
+  updateOutcome as updateOutcomeService,
+  deleteOutcome as deleteOutcomeService,
 } from "@/src/services/outcomesService";
 
 export default function useOutcomes() {
@@ -21,26 +24,20 @@ export default function useOutcomes() {
 
   const create = async (payload: any) => {
     const res = await createOutcomeService(payload);
-    await load();
     return res;
   };
 
   const get = async (id: string) => {
-    const { getOutcome } = await import("@/src/services/outcomesService");
-    return getOutcome(id);
+    return getOutcomeService(id);
   };
 
   const update = async (id: string, payload: any) => {
-    const { updateOutcome } = await import("@/src/services/outcomesService");
-    const res = await updateOutcome(id, payload);
-    await load();
+    const res = await updateOutcomeService(id, payload);
     return res;
   };
 
   const remove = async (id: string) => {
-    // lazy import to avoid circular deps in some setups
-    const { deleteOutcome } = await import("@/src/services/outcomesService");
-    const res = await deleteOutcome(id);
+    const res = await deleteOutcomeService(id);
     await load();
     return res;
   };
