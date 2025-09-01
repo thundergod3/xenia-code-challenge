@@ -35,7 +35,7 @@ export default function ImportButtonModal({
             <h3 className="text-lg font-medium">
               {label || `Import ${module}`}
             </h3>
-            <div className="mt-3">
+            <div className="mt-3 max-h-[80vh] overflow-y-auto">
               <ImportDropzone
                 module={module}
                 schema={schema}

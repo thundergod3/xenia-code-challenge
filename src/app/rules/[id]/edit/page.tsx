@@ -25,6 +25,7 @@ export default function EditRulePage({ params }: { params: { id: string } }) {
       name: values.name,
       description: values.description || "",
       json_conditions,
+      event_id: values?.event_id,
     };
     await update(params.id, payload);
   };

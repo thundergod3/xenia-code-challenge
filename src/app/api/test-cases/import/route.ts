@@ -36,6 +36,33 @@ export async function POST(req: NextRequest) {
     (existingRules || []).forEach((r: any) => (ruleNameToId[r.name] = r.id));
   }
 
+  // gather expected outcome types from import for pre-checks
+  const expectedTypes = Array.from(
+    new Set(
+      testCases
+        .map((t: any) => t.expected_output && t.expected_output.type)
+        .filter(Boolean)
+    )
+  );
+
+  // preload existing outcomes by type
+  const outcomeByType: Record<string, any> = {};
+  if (expectedTypes.length) {
+    const { data: existingOutcomes } = await supabase
+      .from("outcomes")
+      .select("id,type,params")
+      .in("type", expectedTypes as any[]);
+    (existingOutcomes || []).forEach((o: any) => {
+      outcomeByType[o.type] = o;
+    });
+  }
+
+  // prepare ambiguous outcomes map similar to rules import
+  const ambiguousTypes: Record<
+    string,
+    { existingParams: any; importedParams: any; affectedTestCases?: string[] }
+  > = {};
+
   // Process each test case: resolve rule_id if necessary
   for (const tc of testCases) {
     try {
@@ -77,7 +104,6 @@ export async function POST(req: NextRequest) {
         } else {
           // unresolved
           results.unresolved_rules.push({ rule: tc.rule, test_case: tc.name });
-          continue;
         }
       }
 
@@ -89,6 +115,108 @@ export async function POST(req: NextRequest) {
       ) {
         results.skipped++;
         continue;
+      }
+
+      // Check expected_output outcome existence/ambiguity before upsert
+      const expected = tc.expected_output || null;
+
+      if (expected && expected.type) {
+        const existingOutcome = outcomeByType[expected.type];
+        if (!existingOutcome) {
+          // unresolved outcome type
+          if (dryRun) {
+            // ambiguous - collect for dryRun
+            if (!ambiguousTypes[expected.type]) {
+              ambiguousTypes[expected.type] = {
+                existingParams: existingOutcome?.params || {},
+                importedParams: expected?.params || {},
+                affectedTestCases: [],
+              };
+            }
+            ambiguousTypes[expected.type].affectedTestCases!.push(tc.name);
+            continue;
+          }
+          // if not dryRun and no resolution provided, error
+          const res = resolutions[expected.type];
+          if (!res) {
+            results.errors.push({
+              test_case: tc,
+              error: `Unresolved outcome type: ${expected.type}`,
+            });
+            continue;
+          }
+
+          if (res === "create" && !dryRun) {
+            const { data: ins, error: ierr } = await supabase
+              .from("outcomes")
+              .insert([{ type: expected.type, params: expected.params || {} }])
+              .select();
+            if (ierr) {
+              results.errors.push({ test_case: tc, error: ierr.message });
+              continue;
+            }
+            outcomeByType[expected.type] = ins[0];
+          } else if (res === "skip") {
+            tc.expected_output = null;
+          } else {
+            results.errors.push({
+              test_case: tc,
+              error: `Unresolved outcome mapping for type: ${expected.type}`,
+            });
+            continue;
+          }
+        } else {
+          // check for ambiguous params
+          const existingParamsStr = JSON.stringify(
+            existingOutcome.params || {}
+          );
+          const importedParamsStr = JSON.stringify(expected.params || {});
+          if (existingParamsStr !== importedParamsStr) {
+            // ambiguous - collect for dryRun
+            if (!ambiguousTypes[expected.type]) {
+              ambiguousTypes[expected.type] = {
+                existingParams: existingOutcome.params || {},
+                importedParams: expected.params || {},
+                affectedTestCases: [],
+              };
+            }
+            ambiguousTypes[expected.type].affectedTestCases!.push(tc.name);
+            if (dryRun) continue;
+            // if apply, check resolutions
+            const res = resolutions[expected.type];
+            if (res && res.action === "update") {
+              const { error: uerr } = await supabase
+                .from("outcomes")
+                .update({ params: expected.params || {} })
+                .eq("id", existingOutcome.id);
+              if (uerr) {
+                results.errors.push({ test_case: tc, error: uerr.message });
+                continue;
+              }
+              outcomeByType[expected.type].params = expected.params || {};
+            } else if (res && res.action === "create") {
+              const { data: ins, error: ierr } = await supabase
+                .from("outcomes")
+                .insert([
+                  { type: expected.type, params: expected.params || {} },
+                ])
+                .select();
+              if (ierr) {
+                results.errors.push({ test_case: tc, error: ierr.message });
+                continue;
+              }
+              outcomeByType[expected.type] = ins[0];
+            } else if (res && res.action === "skip") {
+              tc.expected_output = null;
+            } else {
+              results.errors.push({
+                test_case: tc,
+                error: `Ambiguous outcome type: ${expected.type}`,
+              });
+              continue;
+            }
+          }
+        }
       }
 
       // Now upsert test case by composite (name + rule_id)
@@ -134,6 +262,9 @@ export async function POST(req: NextRequest) {
       results.errors.push({ test_case: tc, error: String(e) });
     }
   }
+
+  if (Object.keys(ambiguousTypes).length)
+    results.ambiguous_outcomes = ambiguousTypes;
 
   return NextResponse.json(results);
 }

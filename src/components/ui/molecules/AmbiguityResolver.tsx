@@ -11,7 +11,12 @@ export default function AmbiguityResolver({
 }: {
   ambiguous: Record<
     string,
-    { existingParams: any; importedParams: any; affectedRules?: string[] }
+    {
+      existingParams: any;
+      importedParams: any;
+      affectedRules?: string[];
+      affectedTestCases?: string[];
+    }
   >;
   initialResolutions?: Record<string, string>;
   onChange?: (resolutions: Record<string, string>) => void;
@@ -43,6 +48,11 @@ export default function AmbiguityResolver({
 
   if (!types.length) return null;
 
+  console.log({
+    ambiguous,
+    types,
+  });
+
   return (
     <div className="mt-3 p-3 bg-yellow-50 rounded text-sm">
       <div className="font-medium">Ambiguous outcomes detected</div>
@@ -67,10 +77,20 @@ export default function AmbiguityResolver({
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="font-semibold">{t}</div>
-                <div className="text-xs text-gray-600">
-                  Affected rules:{" "}
-                  {(ambiguous[t].affectedRules || []).join(", ")}
-                </div>
+                {ambiguous?.[t]?.affectedRules &&
+                  ambiguous?.[t]?.affectedRules?.length > 0 && (
+                    <div className="text-xs text-gray-600">
+                      Affected rules:{" "}
+                      {(ambiguous[t]?.affectedRules || []).join(", ")}
+                    </div>
+                  )}
+                {ambiguous?.[t]?.affectedTestCases &&
+                  ambiguous?.[t]?.affectedTestCases?.length > 0 && (
+                    <div className="text-xs text-gray-600">
+                      Affected test cases:{" "}
+                      {(ambiguous[t]?.affectedTestCases || []).join(", ")}
+                    </div>
+                  )}
               </div>
               <div className="flex items-center gap-2">
                 <Select

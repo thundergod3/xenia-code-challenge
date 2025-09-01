@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import useImport from "@/src/hooks/useImport";
 import AmbiguityResolver from "@/src/components/ui/molecules/AmbiguityResolver";
 import RuleMappingResolver from "@/src/components/ui/molecules/RuleMappingResolver";
+import OutcomeMappingResolver from "@/src/components/ui/molecules/OutcomeMappingResolver";
 
 export default function ImportDropzone({
   module,
@@ -22,7 +23,7 @@ export default function ImportDropzone({
   const [isValid, setIsValid] = useState(false);
   const [dryRunResult, setDryRunResult] = useState<any | null>(null);
   const [resolutions, setResolutions] = useState<
-    Record<string, string> | undefined
+    Record<string, any> | undefined
   >(undefined);
   const [mappingResolutions, setMappingResolutions] = useState<
     Record<string, any> | undefined
@@ -77,23 +78,37 @@ export default function ImportDropzone({
   const handleImport = async (dryRun = false) => {
     if (!preview) return toast.error("No data to import");
     try {
-      // prepare resolutions to send when applying (not for dryRun)
-      const combinedResolutions = dryRun
-        ? undefined
-        : { ...(resolutions || {}), ...(mappingResolutions || {}) };
-      const payload = await runImport(
-        preview || [],
-        dryRun,
-        combinedResolutions
-      );
-      if (dryRun) {
-        setDryRunResult(payload);
-        toast.success(
-          `Dry-run: ${payload.create || payload.willCreate || 0} create, ${
-            payload.update || payload.willUpdate || 0
-          } update`
+      // If the user requested an actual apply, always run a dry-run first
+      if (!dryRun) {
+        const dryPayload = await runImport(preview || [], true, undefined);
+        setDryRunResult(dryPayload);
+        // if dry-run reports ambiguous or unresolved items, surface and stop
+        const hasAmbiguous =
+          dryPayload?.ambiguous_outcomes &&
+          Object.keys(dryPayload.ambiguous_outcomes || {}).length > 0;
+        const hasUnresolvedRules =
+          dryPayload?.unresolved_rules &&
+          dryPayload.unresolved_rules.length > 0;
+        const hasUnresolvedOutcomes =
+          dryPayload?.unresolved_outcomes &&
+          dryPayload.unresolved_outcomes.length > 0;
+        if (hasAmbiguous || hasUnresolvedRules || hasUnresolvedOutcomes) {
+          toast.info(
+            "Dry-run detected ambiguous/unresolved items — please resolve before applying"
+          );
+          return;
+        }
+
+        // no issues in dry-run; proceed to apply
+        const combinedResolutions = {
+          ...(resolutions || {}),
+          ...(mappingResolutions || {}),
+        };
+        const payload = await runImport(
+          preview || [],
+          false,
+          combinedResolutions
         );
-      } else {
         toast.success(
           `Imported: ${payload.created || 0} created, ${
             payload.updated || 0
@@ -102,7 +117,17 @@ export default function ImportDropzone({
         setPreview(null);
         setDryRunResult(null);
         if (onImport) onImport();
+        return;
       }
+
+      // dryRun === true
+      const payload = await runImport(preview || [], true, undefined);
+      setDryRunResult(payload);
+      toast.success(
+        `Dry-run: ${payload.create || payload.willCreate || 0} create, ${
+          payload.update || payload.willUpdate || 0
+        } update`
+      );
     } catch (e: any) {
       toast.error(e?.message || "Import failed");
     }
@@ -113,6 +138,62 @@ export default function ImportDropzone({
       .replace(/([A-Z])/g, " $1")
       .replace(/_/g, " ")
       .replace(/\b\w/g, (c) => c.toUpperCase());
+
+  const hasIssues = (result: any) => {
+    if (!result) return false;
+    const amb =
+      result?.ambiguous_outcomes &&
+      Object.keys(result.ambiguous_outcomes || {}).length > 0;
+    const ur = result?.unresolved_rules && result.unresolved_rules.length > 0;
+    const uo =
+      result?.unresolved_outcomes && result.unresolved_outcomes.length > 0;
+    return amb || ur || uo;
+  };
+
+  const allResolved = (result: any) => {
+    if (!result) return true;
+    // ambiguous_outcomes: check resolutions for each type
+    const ambiguous = result.ambiguous_outcomes || {};
+    for (const type of Object.keys(ambiguous)) {
+      const r = resolutions?.[type];
+      if (!r) return false;
+      const action = typeof r === "string" ? r : r.action;
+      if (!["update", "create", "skip", "map"].includes(action)) return false;
+    }
+    // unresolved_rules: mappingResolutions should have entry per rule
+    const unresolvedRules = result.unresolved_rules || [];
+    for (const u of unresolvedRules) {
+      const r = mappingResolutions?.[u.rule];
+      if (!r) return false;
+      const action = typeof r === "string" ? r : r.action;
+      if (!["map", "create_placeholder", "skip"].includes(action)) return false;
+    }
+    // unresolved_outcomes: resolutions should include mapping for each type
+    const unresolvedOutcomes = result.unresolved_outcomes || [];
+    for (const u of unresolvedOutcomes) {
+      const r = resolutions?.[u.type];
+      if (!r) return false;
+      const action = typeof r === "string" ? r : r.action;
+      if (!["map", "create", "skip", "update"].includes(action)) return false;
+    }
+    return true;
+  };
+
+  const issueCounts = (result: any) => {
+    if (!result)
+      return { ambiguous: 0, unresolvedRules: 0, unresolvedOutcomes: 0 };
+    return {
+      ambiguous: result?.ambiguous_outcomes
+        ? Object.keys(result.ambiguous_outcomes || {}).length
+        : 0,
+      unresolvedRules: result?.unresolved_rules
+        ? result.unresolved_rules.length
+        : 0,
+      unresolvedOutcomes: result?.unresolved_outcomes
+        ? result.unresolved_outcomes.length
+        : 0,
+    };
+  };
 
   return (
     <div className="space-y-3">
@@ -158,11 +239,39 @@ export default function ImportDropzone({
             <Button
               onClick={() => handleImport(false)}
               className="bg-blue-600 text-white"
-              disabled={!isValid}
+              disabled={
+                !isValid ||
+                loading ||
+                (dryRunResult &&
+                  hasIssues(dryRunResult) &&
+                  !allResolved(dryRunResult))
+              }
               loading={loading}>
               Import
             </Button>
           </div>
+
+          {dryRunResult && hasIssues(dryRunResult) && (
+            <div className="mt-3 p-3 rounded bg-yellow-50 text-sm text-gray-800">
+              <div className="font-medium">Resolve import issues</div>
+              <div className="mt-1 text-xs text-gray-600">
+                The dry-run detected {issueCounts(dryRunResult).ambiguous}{" "}
+                ambiguous outcome type(s) and{" "}
+                {issueCounts(dryRunResult).unresolvedRules} unresolved rule(s){" "}
+                {issueCounts(dryRunResult).unresolvedOutcomes > 0 && (
+                  <>
+                    and {issueCounts(dryRunResult).unresolvedOutcomes}{" "}
+                    unresolved outcome type(s)
+                  </>
+                )}
+                .
+              </div>
+              <div className="mt-2 text-xs text-gray-700">
+                Please use the resolvers below to choose how to handle ambiguous
+                or unresolved items before applying the import.
+              </div>
+            </div>
+          )}
 
           {dryRunResult && (
             <div className="mt-3 p-3 bg-gray-50 rounded text-sm">
@@ -172,22 +281,8 @@ export default function ImportDropzone({
                   <div>No changes detected</div>
                 )}
 
-                {Object.entries(dryRunResult || {})
-                  .filter(
-                    ([k]) =>
-                      k !== "ambiguous_outcomes" && k !== "unresolved_rules"
-                  )
-                  .map(([k, v]) => (
-                    <div key={k}>
-                      {humanizeKey(k)}: {String(v)}
-                    </div>
-                  ))}
-
                 {dryRunResult?.ambiguous_outcomes && (
                   <div className="mt-2 text-xs text-red-700">
-                    <div className="font-medium">
-                      Ambiguous outcomes detected:
-                    </div>
                     <AmbiguityResolver
                       ambiguous={dryRunResult.ambiguous_outcomes}
                       initialResolutions={resolutions}
@@ -197,11 +292,21 @@ export default function ImportDropzone({
                 )}
 
                 {dryRunResult?.unresolved_rules && (
-                  <div className="mt-2">
+                  <div className="mt-2 text-xs text-red-700">
                     <RuleMappingResolver
                       unresolved={dryRunResult.unresolved_rules}
                       initialResolutions={mappingResolutions}
                       onChange={setMappingResolutions}
+                    />
+                  </div>
+                )}
+
+                {dryRunResult?.unresolved_outcomes && (
+                  <div className="mt-2 text-xs text-red-700">
+                    <OutcomeMappingResolver
+                      unresolved={dryRunResult.unresolved_outcomes}
+                      initialResolutions={resolutions}
+                      onChange={setResolutions}
                     />
                   </div>
                 )}

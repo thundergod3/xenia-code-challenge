@@ -476,8 +476,12 @@ export default function TestCaseForm({
     setInputText(
       initial.input_facts ? JSON.stringify(initial.input_facts, null, 2) : ""
     );
-    setSelectedOutcomeId(initial?.rule_detail?.event_id);
-  }, [initial]);
+    setSelectedOutcomeId(
+      outcomes?.find(
+        (record) => record?.type === initial?.expected_output?.type
+      )?.id
+    );
+  }, [initial, outcomes]);
 
   return (
     <div>
