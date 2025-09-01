@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ExtendedFactSchema } from "@/src/lib/validations";
@@ -21,7 +21,7 @@ export default function FactForm({
   defaultValues?: any;
 }) {
   const [submitting, setSubmitting] = useState(false);
-  const { register, handleSubmit, formState, watch } = useForm({
+  const { register, handleSubmit, formState, watch, getValues } = useForm({
     resolver: zodResolver(ExtendedFactSchema as any),
     defaultValues: defaultValues || undefined,
   });
@@ -31,6 +31,14 @@ export default function FactForm({
   const selectedType = watch("type");
   const isDynamic = watch("dynamic");
   const dynErrors = errors?.dynamic_config as any | undefined;
+  const dynConfig = watch("dynamic_config") || {};
+  const canTestResolver = Boolean(
+    dynConfig?.type &&
+      dynConfig?.method &&
+      dynConfig?.endpoint &&
+      dynConfig?.expected_type &&
+      dynConfig?.path
+  );
 
   const submit = async (values: any) => {
     setSubmitting(true);
@@ -54,10 +62,13 @@ export default function FactForm({
   const [resolverResult, setResolverResult] = useState<any | null>(null);
   const [resolverError, setResolverError] = useState<string | null>(null);
   const [resolverLoading, setResolverLoading] = useState<boolean>(false);
+  const [resolverTried, setResolverTried] = useState<boolean>(false);
 
   const handleTestResolver = async () => {
     setResolverResult(null);
     setResolverError(null);
+    setResolverTried(true);
+    if (!canTestResolver) return;
     setResolverLoading(true);
     try {
       const cfg = watch("dynamic_config");
@@ -115,7 +126,7 @@ export default function FactForm({
       )}
 
       <Field label="Dynamic fact">
-        <div className="flex items-center justify-between w-full">
+        <div className="flex items-center justify-start w-full gap-4">
           <div className="text-sm text-gray-700">
             Resolve this fact dynamically at runtime
           </div>
@@ -129,14 +140,29 @@ export default function FactForm({
         <div className="space-y-4 p-4 border rounded bg-gray-50">
           <div className="grid grid-cols-2 gap-4">
             <Field label="Dynamic type">
-              <Select {...register("dynamic_config.type")} options={["http"]} />
+              <Select
+                {...register("dynamic_config.type")}
+                options={["http"]}
+                placeholder="Select type"
+              />
+              {dynErrors?.type && (
+                <div className="text-sm text-red-600 mt-1">
+                  Dynamic type is required to test the resolver
+                </div>
+              )}
             </Field>
 
             <Field label="Method">
               <Select
                 {...register("dynamic_config.method")}
                 options={["GET", "POST"]}
+                placeholder="Select method"
               />
+              {dynErrors?.method && (
+                <div className="text-sm text-red-600 mt-1">
+                  HTTP method is required (GET or POST) to call the resolver
+                </div>
+              )}
             </Field>
           </div>
 
@@ -147,7 +173,7 @@ export default function FactForm({
             />
             {dynErrors?.endpoint && (
               <div className="text-sm text-red-600 mt-1">
-                {dynErrors.endpoint?.message}
+                Endpoint URL is required (include protocol, e.g. https://)
               </div>
             )}
           </Field>
@@ -158,13 +184,25 @@ export default function FactForm({
                 {...register("dynamic_config.path")}
                 placeholder="data.rate"
               />
+              {dynErrors?.path && (
+                <div className="text-sm text-red-600 mt-1">
+                  JSON path is required to extract the value (e.g. data.rate)
+                </div>
+              )}
             </Field>
 
             <Field label="Expected type">
               <Select
                 {...register("dynamic_config.expected_type")}
                 options={["number", "string", "boolean", "list"]}
+                placeholder="Select expected type"
               />
+              {dynErrors?.expected_type && !dynConfig?.expected_type && (
+                <div className="text-sm text-red-600 mt-1">
+                  Expected type is required to validate and coerce the resolved
+                  value
+                </div>
+              )}
             </Field>
           </div>
 
@@ -172,18 +210,22 @@ export default function FactForm({
             <Field label="Cache TTL (seconds)">
               <Input
                 type="number"
-                {...register("dynamic_config.cache_ttl_seconds")}
+                {...register("dynamic_config.cache_ttl_seconds", {
+                  valueAsNumber: true,
+                })}
               />
             </Field>
 
             <div className="flex justify-start items-center gap-3">
-              <Button
-                type="button"
-                className="px-3 py-1 bg-gray-600 text-white"
-                onClick={handleTestResolver}
-                disabled={resolverLoading}>
-                {resolverLoading ? "Testing..." : "Test resolver"}
-              </Button>
+              <div className="flex flex-col">
+                <Button
+                  type="button"
+                  className="px-3 py-1 bg-gray-600 text-white"
+                  onClick={handleTestResolver}
+                  disabled={resolverLoading}>
+                  {resolverLoading ? "Testing..." : "Test resolver"}
+                </Button>
+              </div>
               {resolverResult !== null && (
                 <div className="text-sm text-green-700">
                   Result: {String(resolverResult)}
