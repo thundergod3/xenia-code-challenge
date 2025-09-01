@@ -40,7 +40,7 @@ export const FactImportSchema = BaseExtendedFactSchema.omit({ id: true });
 export const OutcomeSchema = z.object({
   id: z.string().optional().nullable(),
   type: z.string().min(1),
-  params: z.string().optional().nullable(),
+  params: z.string().min(1),
 });
 
 export const RuleSchema = z.object({
