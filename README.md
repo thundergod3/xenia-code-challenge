@@ -173,3 +173,10 @@ How to use the errors view:
 - Filter by rule, test-case, date range, or error type to narrow results
 - Click a row to open a detailed modal that shows the full `actual_output` JSON and replay inputs
 - Use the resolved facts to reproduce the failure locally or in a CI job
+
+## Demos
+
+- **Live demo (deployed app)**: [https://xenia-code-challenge.vercel.app/](https://xenia-code-challenge.vercel.app/)
+- **Demo: basic flow (facts, outcomes, rules, test case)**: [https://www.loom.com/share/edc73119927b43328c2c2df154383bf3](https://www.loom.com/share/edc73119927b43328c2c2df154383bf3)
+- **Demo: builder**: [https://www.loom.com/share/24607ac234704a26bdc6a2e6eaaaa833](https://www.loom.com/share/24607ac234704a26bdc6a2e6eaaaa833)
+- **Demo: import/export flows**: [https://www.loom.com/share/deec9665be2c4bd6af54c2999bd530b7](https://www.loom.com/share/deec9665be2c4bd6af54c2999bd530b7)
