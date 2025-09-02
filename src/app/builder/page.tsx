@@ -15,6 +15,7 @@ import { RuleSchema } from "@/src/lib/validations";
 import { toast } from "react-toastify";
 import useFacts from "@/src/hooks/useFacts";
 import useOutcomes from "@/src/hooks/useOutcomes";
+import useBuilder from "@/src/hooks/useBuilder";
 import BuilderView from "@/src/components/builder/BuilderView";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/src/lib/routes";
@@ -27,7 +28,7 @@ export default function BuilderPage() {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [ruleJson, setRuleJson] = useState<any | null>(null);
   const [validationErrors, setValidationErrors] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const { saveRule, saving } = useBuilder();
   const [ruleName, setRuleName] = useState("Generated rule");
   const [ruleDescription, setRuleDescription] = useState("");
   const [selectedOutcomeId, setSelectedOutcomeId] = useState<
@@ -193,7 +194,6 @@ export default function BuilderPage() {
       return;
     }
 
-    setSaving(true);
     try {
       const payload: any = {
         rule: {
@@ -209,21 +209,13 @@ export default function BuilderPage() {
         payload.rule.event_id = selectedOutcomeId;
       }
 
-      const res = await fetch("/api/builder/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j?.error || "Save failed");
+      const j = await saveRule(payload);
       const createdId = j.rule?.[0]?.id;
       toast.success("Rule and outcome saved");
       if (createdId) router.push(ROUTES.RULE_EDIT(createdId));
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || "Save failed");
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -299,11 +291,19 @@ export default function BuilderPage() {
       json = { conditions: { all: conditions } };
     }
 
-    const toValidate = {
+    const toValidate: any = {
       name: ruleName || "Generated rule",
       description: ruleDescription || "",
       json_conditions: json,
     };
+
+    if (selectedOutcomeId === "new") {
+      const params = JSON.parse(newOutcomeParams || "{}");
+      toValidate.outcome = { type: newOutcomeType, params };
+    } else if (selectedOutcomeId) {
+      toValidate.event_id = selectedOutcomeId;
+    }
+
     const parsed = RuleSchema.safeParse(toValidate as any);
     if (!parsed.success) {
       setValidationErrors(JSON.stringify(parsed.error.format(), null, 2));

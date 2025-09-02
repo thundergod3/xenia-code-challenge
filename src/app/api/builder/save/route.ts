@@ -18,6 +18,10 @@ export async function POST(req: NextRequest) {
           { status: 500 }
         );
       outcomeId = outcomeData?.[0]?.id || null;
+    } else {
+      if (rule?.event_id) {
+        outcomeId = rule?.event_id;
+      }
     }
 
     const rulePayload: any = {

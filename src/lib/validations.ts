@@ -27,7 +27,7 @@ export const BaseExtendedFactSchema = FactSchema.extend({
 });
 
 export const ExtendedFactSchema = BaseExtendedFactSchema.refine(
-  (data) => data.dynamic,
+  (data) => data.dynamic !== undefined || data.dynamic,
   {
     message: "dynamic_config is required when dynamic is enabled",
     path: ["dynamic_config"],

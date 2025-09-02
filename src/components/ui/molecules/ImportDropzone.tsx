@@ -281,6 +281,20 @@ export default function ImportDropzone({
                   <div>No changes detected</div>
                 )}
 
+                {Object.entries(dryRunResult || {})
+                  .filter(
+                    ([k]) =>
+                      k !== "ambiguous_outcomes" &&
+                      k !== "unresolved_rules" &&
+                      k !== "unresolved_outcomes" &&
+                      k !== "errors"
+                  )
+                  .map(([k, v]) => (
+                    <div key={k}>
+                      {humanizeKey(k)}: {String(v)}
+                    </div>
+                  ))}
+
                 {dryRunResult?.ambiguous_outcomes && (
                   <div className="mt-2 text-xs text-red-700">
                     <AmbiguityResolver

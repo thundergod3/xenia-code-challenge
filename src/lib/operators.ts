@@ -9,7 +9,7 @@ export const operatorCompatibility: Record<string, string[]> = {
   ],
   string: ["equal", "notEqual", "contains", "startsWith", "endsWith"],
   boolean: ["equal", "notEqual"],
-  list: ["in", "notIn", "equal"],
+  list: ["in", "notIn"],
 };
 
 export const allOperators = Array.from(

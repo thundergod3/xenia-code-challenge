@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ExtendedFactSchema } from "@/src/lib/validations";
@@ -21,9 +21,22 @@ export default function FactForm({
   defaultValues?: any;
 }) {
   const [submitting, setSubmitting] = useState(false);
-  const { register, handleSubmit, formState, watch, getValues } = useForm({
+
+  const initial = useMemo(() => {
+    if (!defaultValues) return;
+
+    const cloneDefaultValues = { ...defaultValues };
+
+    if (cloneDefaultValues?.options) {
+      cloneDefaultValues.options = cloneDefaultValues?.options?.join(",");
+    }
+
+    return cloneDefaultValues;
+  }, [defaultValues]);
+
+  const { register, handleSubmit, formState, watch } = useForm({
     resolver: zodResolver(ExtendedFactSchema as any),
-    defaultValues: defaultValues || undefined,
+    defaultValues: initial,
   });
   const router = useRouter();
 
@@ -62,12 +75,10 @@ export default function FactForm({
   const [resolverResult, setResolverResult] = useState<any | null>(null);
   const [resolverError, setResolverError] = useState<string | null>(null);
   const [resolverLoading, setResolverLoading] = useState<boolean>(false);
-  const [resolverTried, setResolverTried] = useState<boolean>(false);
 
   const handleTestResolver = async () => {
     setResolverResult(null);
     setResolverError(null);
-    setResolverTried(true);
     if (!canTestResolver) return;
     setResolverLoading(true);
     try {
